@@ -1,0 +1,37 @@
+name: ffmpeg
+
+on: 
+  push:
+    paths: 
+      - .github/workflows/ffmpeg.yml
+      - build.sh
+jobs:
+  build:
+    strategy:
+      fail-fast: true
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Install MSYS2
+      run: choco install msys2 --no-progress
+    - name: Checkout FFmpeg
+      run: git clone https://github.com/FFmpeg/FFmpeg
+    - name: Update msys
+      run: 'C:\tools\msys64\usr\bin\bash -lc "pacman -Syuu --noconfirm"'
+    - name: Update msys again
+      run: 'C:\tools\msys64\usr\bin\bash -lc "pacman -Syuu --noconfirm"'
+    - name: Install deps
+      run: 'C:\tools\msys64\usr\bin\bash -lc "pacman -Sy --noconfirm base-devel p7zip zlib mingw-w64-x86_64-fdk-aac mingw-w64-x86_64-yasm mingw-w64-x86_64-zlib"'
+    - name: Build FFmpeg
+      run: |
+        call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=amd64
+        set MSYS2_PATH_TYPE=inherit
+        C:\tools\msys64\usr\bin\bash -lc "./build.sh -b"
+      shell: cmd
+      env:
+        HOME: ${{ runner.workspace }}
+    - uses: actions/upload-artifact@master
+      name: Upload Artifact
+      with:
+        name: ffmpeg
+        path: ffmpeg/install
