@@ -12,24 +12,46 @@ jobs:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v1
+    - name: Checkout FFmpeg
+      run: git clone https://github.com/FFmpeg/FFmpeg --depth 1
+    - name: Checkout fdk-aac
+      run: git clone https://github.com/mstorsjo/fdk-aac --depth 1
+    - name: Checkout zlib
+      run: git clone https://github.com/jtanx/zlib --depth 1
+    - name: Install zlib
+      shell: cmd
+      run: |
+        call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=amd64
+        mkdir ${{ runner.workspace }}\zlib
+        cd zlib
+        nmake -f win32/Makefile.msc AS=ml64 LOC="-DASMV -DASMINF -I." OBJA="inffasx64.obj gvmat64.obj inffas8664.obj"
+        cp *.h *.lib "${{ runner.workspace }}\zlib"
+        dir /s "${{ runner.workspace }}\zlib"
+    - name: Install fdk-aac
+      shell: cmd
+      run: |
+        call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=amd64
+        mkdir ${{ runner.workspace }}\fdkinstall
+        mkdir ${{ runner.workspace }}\fdkinstall\include
+        cd fdk-aac
+        nmake -f Makefile.vc
+        nmake -f Makefile.vc prefix=${{ runner.workspace }}\fdkinstall install
+        dir /s "${{ runner.workspace }}\fdkinstall
     - name: Install MSYS2
       run: choco install msys2 --no-progress
-    - name: Checkout FFmpeg
-      run: git clone https://github.com/FFmpeg/FFmpeg
-    - name: Update msys
-      run: 'C:\tools\msys64\usr\bin\bash -lc "pacman -Syuu --noconfirm"'
-    - name: Update msys again
-      run: 'C:\tools\msys64\usr\bin\bash -lc "pacman -Syuu --noconfirm"'
     - name: Install deps
-      run: 'C:\tools\msys64\usr\bin\bash -lc "pacman -Sy --noconfirm base-devel p7zip zlib mingw-w64-x86_64-fdk-aac mingw-w64-x86_64-yasm mingw-w64-x86_64-zlib"'
+      run: 'C:\tools\msys64\usr\bin\bash -lc "pacman -Sy --noconfirm --needed base-devel p7zip zlib mingw-w64-x86_64-yasm"'
     - name: Build FFmpeg
       run: |
         call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=amd64
-        set MSYS2_PATH_TYPE=inherit
         C:\tools\msys64\usr\bin\bash -lc "./build.sh -b"
       shell: cmd
       env:
-        HOME: ${{ runner.workspace }}
+        HOME: ${{ runner.workspace }}/ffmpegbuild
+        MSYS2_PATH_TYPE: inherit
+        MSYSTEM: MINGW64
+        LIB: ${{ runner.workspace }}\fdkinstall\lib;${{ runner.workspace }}\zlib
+        INCLUDE: ${{ runner.workspace }}\fdkinstall\include;${{ runner.workspace }}\zlib
     - uses: actions/upload-artifact@master
       name: Upload Artifact
       with:

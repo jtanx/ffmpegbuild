@@ -1,10 +1,7 @@
 #!/bin/bash
-set -eo pipefail
 
 echo $PATH
 cd FFmpeg
-
-wget http://www.tortall.net/projects/yasm/releases/yasm-1.3.0-win64.exe -O /bin/yasm.exe
 
 ./configure \
   --arch=amd64 \
@@ -12,6 +9,7 @@ wget http://www.tortall.net/projects/yasm/releases/yasm-1.3.0-win64.exe -O /bin/
   --enable-gpl \
   --enable-nonfree \
   --enable-network \
+  --disable-shared \
   --enable-static \
   --disable-debug \
   --disable-doc \
@@ -22,10 +20,9 @@ wget http://www.tortall.net/projects/yasm/releases/yasm-1.3.0-win64.exe -O /bin/
   --enable-zlib \
   --enable-libfdk-aac\
   --prefix=install \
-  --toolchain=msvc
+  --toolchain=msvc ||  (ls && cat ffbuild/config.log && exit 1)
 
-make
+
+
+make -j4
 make install
-# rename lib "" install/lib/*.a
-# rename .a .lib install/lib/*.a
-mv install/bin/*.lib install/lib/
